@@ -1,0 +1,4 @@
+src/logger/bin
+src/logger/obj
+test/logger.Tests/bin
+test/logger.Tests/obj

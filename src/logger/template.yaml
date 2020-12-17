@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Test log
+
+Parameters:
+  DatadogLambda:
+    Type: String
+    Default: arn:aws:lambda:{{ARN}}:function:datadog-log-forwarder
+Resources:
+  LambdaFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: bin/Release/netcoreapp2.1/publish
+      Handler: logger::logger.Function::FunctionHandler
+      Runtime: dotnetcore2.1
+      Environment: 
+        Variables:
+          ENV: "{{ENV}}"
+          DOTNET_CLI_HOME: /tmp
+          LOGLEVEL: "{{LOGLEVEL}}"
+      Timeout: 180
+      Tags:
+        ENV: "{{ENV}}"
+
+  DatadogLambdaLogGroupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DatadogLambda
+      Principal: logs.{{REGION}}.amazonaws.com
+      SourceArn: !GetAtt LambdaFunctionLogGroup.Arn
+  LambdaFunctionLogGroup:
+    DependsOn: LambdaFunction
+    Properties:
+      LogGroupName:
+        Fn::Join:
+        - ''
+        - - /aws/lambda/
+          - Ref: LambdaFunction
+      RetentionInDays: 14
+    Type: AWS::Logs::LogGroup
+  LambdaSubscriptionFilter:
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      LogGroupName: !Ref LambdaFunctionLogGroup
+      DestinationArn: !Ref DatadogLambda
+      FilterPattern: ""
